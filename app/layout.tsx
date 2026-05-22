@@ -6,6 +6,11 @@ export const metadata: Metadata = {
   title: "StudyFlow AI",
   description:
     "Academic task manager berbasis web untuk tugas, jadwal, catatan, dan rencana belajar dengan bantuan AI.",
+  icons: {
+    icon: "/logo.png",
+    shortcut: "/logo.png",
+    apple: "/logo.png",
+  },
 };
 
 export default function RootLayout({

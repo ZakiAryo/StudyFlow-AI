@@ -38,8 +38,8 @@ export function Sidebar({
         <Image
           src="/logo.png"
           alt="Logo StudyFlow AI"
-          width={100}
-          height={100}
+          width={500}
+          height={500}
           className="h-11 w-11 shrink-0 object-contain"
           priority
         />

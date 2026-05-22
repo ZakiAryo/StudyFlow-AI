@@ -43,31 +43,49 @@ export const metadata = {
 File yang diedit:
 
 - `components/layout/sidebar.tsx`
-- `public/logo.png` jika memakai gambar.
+- `app/login/page.tsx`
+- `app/register/page.tsx`
+- `public/logo.png`
 
-Before memakai icon:
-
-```tsx
-<Sparkles className="h-5 w-5" />
-```
-
-After memakai icon lain:
-
-```tsx
-<GraduationCap className="h-5 w-5" />
-```
-
-After memakai gambar:
-
-```tsx
-<Image src="/logo.png" alt="Logo CampusFlow AI" width={32} height={32} />
-```
-
-Simpan logo gambar di:
+Logo utama aplikasi sekarang memakai file gambar:
 
 ```txt
 public/logo.png
 ```
+
+Untuk mengganti logo:
+
+1. Siapkan file logo baru dengan format PNG.
+2. Ubah nama file menjadi `logo.png`.
+3. Ganti file lama di folder `public/logo.png`.
+4. Restart development server jika gambar belum berubah di browser.
+
+Contoh penggunaan logo di component:
+
+```tsx
+import Image from "next/image";
+
+<Image
+  src="/logo.png"
+  alt="Logo StudyFlow AI"
+  width={40}
+  height={40}
+/>
+```
+
+Before jika ingin memakai logo lama:
+
+```tsx
+src="/logo.png"
+```
+
+After jika ingin memakai nama file berbeda:
+
+```tsx
+src="/logo-campusflow.png"
+```
+
+Jika nama file diganti, pastikan file tersebut juga ada di folder `public/` dan update semua pemakaian `src` di `components/layout/sidebar.tsx`, `app/login/page.tsx`, dan `app/register/page.tsx`.
 
 ## Cara Mengganti Warna Tema
 
@@ -343,7 +361,7 @@ GEMINI_API_KEY=your_gemini_api_key
 | Customisasi | File path |
 | --- | --- |
 | Nama aplikasi | `app/layout.tsx`, `components/layout/sidebar.tsx`, `components/layout/header.tsx` |
-| Logo | `components/layout/sidebar.tsx`, `public/logo.png` |
+| Logo | `components/layout/sidebar.tsx`, `app/login/page.tsx`, `app/register/page.tsx`, `public/logo.png` |
 | Warna tema | `app/globals.css`, `tailwind.config.ts` |
 | Menu sidebar | `components/layout/sidebar.tsx`, `middleware.ts` |
 | Link GitHub | `app/(main)/settings/page.tsx` |

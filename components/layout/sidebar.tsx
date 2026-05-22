@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -34,11 +35,18 @@ export function Sidebar({
   const content = (
     <aside className="flex h-full w-72 flex-col border-r bg-card">
       <div className="flex h-16 items-center gap-3 border-b px-5">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-          <Sparkles className="h-5 w-5" />
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-background">
+          <Image
+            src="/logo.png"
+            alt="Logo StudyFlow AI"
+            width={40}
+            height={40}
+            className="h-full w-full object-cover"
+            priority
+          />
         </div>
-        <div>
-          <p className="font-semibold">StudyFlow AI</p>
+        <div className="min-w-0">
+          <p className="truncate font-semibold">StudyFlow AI</p>
           <p className="text-xs text-muted-foreground">Academic workspace</p>
         </div>
       </div>

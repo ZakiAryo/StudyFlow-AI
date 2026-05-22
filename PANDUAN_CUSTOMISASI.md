@@ -1,0 +1,368 @@
+# Panduan Customisasi StudyFlow AI
+
+Panduan ini membantu kamu mengubah StudyFlow AI agar cocok untuk kebutuhan portfolio pribadi. Semua dokumentasi tetap menggunakan Bahasa Indonesia.
+
+## Warning Keamanan
+
+Jangan upload API key ke GitHub. File `.env.local` harus tetap lokal dan tidak boleh masuk repository.
+
+Jangan pernah menulis `GEMINI_API_KEY` di React component, client-side file, README, screenshot, atau dokumentasi publik. Gunakan `.env.example` hanya untuk placeholder.
+
+## Cara Mengganti Nama Aplikasi
+
+File yang diedit:
+
+- `app/layout.tsx`
+- `components/layout/sidebar.tsx`
+- `components/layout/header.tsx`
+- `README.md`
+
+Before:
+
+```tsx
+StudyFlow AI
+```
+
+After:
+
+```tsx
+CampusFlow AI
+```
+
+Jika mengganti metadata:
+
+```tsx
+export const metadata = {
+  title: "CampusFlow AI",
+  description: "Academic task manager untuk mahasiswa.",
+};
+```
+
+## Cara Mengganti Logo
+
+File yang diedit:
+
+- `components/layout/sidebar.tsx`
+- `public/logo.png` jika memakai gambar.
+
+Before memakai icon:
+
+```tsx
+<Sparkles className="h-5 w-5" />
+```
+
+After memakai icon lain:
+
+```tsx
+<GraduationCap className="h-5 w-5" />
+```
+
+After memakai gambar:
+
+```tsx
+<Image src="/logo.png" alt="Logo CampusFlow AI" width={32} height={32} />
+```
+
+Simpan logo gambar di:
+
+```txt
+public/logo.png
+```
+
+## Cara Mengganti Warna Tema
+
+File yang diedit:
+
+- `app/globals.css`
+- `tailwind.config.ts`
+
+Before:
+
+```css
+:root {
+  --primary: 199 89% 48%;
+}
+```
+
+After:
+
+```css
+:root {
+  --primary: 158 64% 42%;
+}
+```
+
+Jika dark mode memakai variable terpisah, ubah juga bagian `.dark`.
+
+## Cara Mengganti Menu Sidebar
+
+File yang diedit:
+
+- `components/layout/sidebar.tsx`
+
+Before:
+
+```tsx
+const navItems = [
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/courses", label: "Mata Kuliah", icon: BookOpen },
+];
+```
+
+After:
+
+```tsx
+const navItems = [
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/courses", label: "Mata Kuliah", icon: BookOpen },
+  { href: "/ai/priority", label: "AI Priority", icon: Sparkles },
+];
+```
+
+Jika menambahkan menu baru, buat route baru di `app/(main)/...` dan tambahkan route tersebut ke `middleware.ts` jika harus protected.
+
+## Cara Menambahkan Link GitHub
+
+File yang diedit:
+
+- `app/(main)/settings/page.tsx`
+
+Contoh:
+
+```tsx
+<a href="https://github.com/username" target="_blank" rel="noreferrer">
+  GitHub
+</a>
+```
+
+## Cara Menambahkan Link Portfolio
+
+File yang diedit:
+
+- `app/(main)/settings/page.tsx`
+
+Contoh:
+
+```tsx
+<a href="https://nama-kamu.dev" target="_blank" rel="noreferrer">
+  Portfolio
+</a>
+```
+
+## Cara Menambahkan Link LinkedIn
+
+File yang diedit:
+
+- `app/(main)/settings/page.tsx`
+
+Contoh:
+
+```tsx
+<a href="https://www.linkedin.com/in/username" target="_blank" rel="noreferrer">
+  LinkedIn
+</a>
+```
+
+## Cara Mengganti Dashboard Cards
+
+File yang diedit:
+
+- `components/dashboard/dashboard-manager.tsx`
+- `components/dashboard/dashboard-card.tsx`
+
+Before:
+
+```tsx
+const statCards = [
+  { label: "Total tugas", value: String(metrics.total) },
+  { label: "Selesai", value: String(metrics.completed) },
+];
+```
+
+After:
+
+```tsx
+const statCards = [
+  { label: "Total tugas", value: String(metrics.total) },
+  { label: "Overdue", value: String(metrics.overdue) },
+  { label: "Deadline minggu ini", value: String(metrics.dueThisWeek) },
+];
+```
+
+Pastikan metrik dihitung dari data user yang sedang login.
+
+## Cara Custom Warna Mata Kuliah
+
+File yang diedit:
+
+- `database/schema.sql`
+- `components/courses/course-manager.tsx`
+
+Kolom database:
+
+```sql
+color_label text not null default '#38bdf8'
+```
+
+Contoh warna:
+
+```txt
+#38bdf8
+#10b981
+#f59e0b
+#f43f5e
+#8b5cf6
+```
+
+Jika database sudah berjalan di Supabase, perubahan schema perlu dijalankan sebagai query/migration baru.
+
+## Cara Custom Task Priority Badges
+
+File yang diedit:
+
+- `database/schema.sql`
+- `components/tasks/priority-badge.tsx`
+- `components/tasks/task-manager.tsx`
+
+Priority default:
+
+```txt
+low
+medium
+high
+urgent
+```
+
+Before:
+
+```sql
+constraint tasks_priority_check check (priority in ('low', 'medium', 'high', 'urgent'))
+```
+
+After menambahkan `critical`:
+
+```sql
+constraint tasks_priority_check check (priority in ('low', 'medium', 'high', 'urgent', 'critical'))
+```
+
+Tambahkan style badge:
+
+```tsx
+critical: "border-red-300 bg-red-50 text-red-700"
+```
+
+Tambahkan juga option di form tugas agar user bisa memilih priority baru.
+
+## Cara Custom AI Prompt Behavior
+
+File yang diedit:
+
+- `app/api/ai/breakdown/route.ts`
+- `app/api/ai/study-plan/route.ts`
+- `app/api/ai/priority/route.ts`
+- `app/api/ai/summarize-notes/route.ts`
+- `lib/gemini.ts`
+
+Before:
+
+```ts
+"Buat rencana belajar yang realistis sebelum deadline."
+```
+
+After:
+
+```ts
+"Buat rencana belajar yang cocok untuk mahasiswa yang hanya punya 1 jam per hari."
+```
+
+Aturan penting:
+
+- Gemini harus dipanggil dari server-side API route.
+- Jangan memanggil Gemini langsung dari browser.
+- Jangan import `lib/gemini.ts` ke file yang memakai `"use client"`.
+- Validasi response JSON sebelum ditampilkan atau disimpan.
+- Jangan mengirim data user yang tidak diperlukan.
+
+## Cara Memasukkan atau Mengganti Supabase URL
+
+File lokal:
+
+- `.env.local`
+
+Tempat production:
+
+- Vercel Environment Variables.
+
+Contoh:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://project-id.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=anon_key_baru
+```
+
+Setelah mengganti `.env.local`, restart development server.
+
+## Cara Memasukkan atau Mengganti Gemini API Key
+
+File lokal:
+
+- `.env.local`
+
+Tempat production:
+
+- Vercel Environment Variables.
+
+Contoh:
+
+```env
+GEMINI_API_KEY=api_key_baru
+```
+
+Jangan masukkan Gemini API key asli ke `.env.example`.
+
+## Cara Memasukkan Environment Variables di Vercel
+
+1. Buka dashboard Vercel.
+2. Pilih project StudyFlow AI.
+3. Buka Settings.
+4. Pilih Environment Variables.
+5. Tambahkan:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+GEMINI_API_KEY=your_gemini_api_key
+```
+
+6. Pilih environment yang dibutuhkan.
+7. Simpan.
+8. Redeploy project.
+
+## File Path yang Harus Diedit
+
+| Customisasi | File path |
+| --- | --- |
+| Nama aplikasi | `app/layout.tsx`, `components/layout/sidebar.tsx`, `components/layout/header.tsx` |
+| Logo | `components/layout/sidebar.tsx`, `public/logo.png` |
+| Warna tema | `app/globals.css`, `tailwind.config.ts` |
+| Menu sidebar | `components/layout/sidebar.tsx`, `middleware.ts` |
+| Link GitHub | `app/(main)/settings/page.tsx` |
+| Link portfolio | `app/(main)/settings/page.tsx` |
+| Link LinkedIn | `app/(main)/settings/page.tsx` |
+| Dashboard cards | `components/dashboard/dashboard-manager.tsx`, `components/dashboard/dashboard-card.tsx` |
+| Warna mata kuliah | `database/schema.sql`, `components/courses/course-manager.tsx` |
+| Priority badges | `database/schema.sql`, `components/tasks/priority-badge.tsx`, `components/tasks/task-manager.tsx` |
+| AI prompt behavior | `app/api/ai/*/route.ts`, `lib/gemini.ts` |
+| Supabase URL | `.env.local`, Vercel Environment Variables |
+| Gemini API key | `.env.local`, Vercel Environment Variables |
+
+## Checklist Sebelum Upload ke GitHub
+
+- `.env.local` tidak ikut commit.
+- `.env.example` hanya berisi placeholder.
+- Tidak ada API key di README, screenshot, source code, atau commit history.
+- Tidak ada database password di repository.
+- Folder `docs/screenshots/` tersedia.
+- Dokumentasi menggunakan Bahasa Indonesia.
+- `npm run typecheck` berhasil.
+- `npm run build` berhasil.

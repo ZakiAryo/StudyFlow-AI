@@ -40,7 +40,7 @@ export function Sidebar({
           alt="Logo StudyFlow AI"
           width={250}
           height={250}
-          className="h-16 w-16 shrink-0 object-contain"
+          className="h-11 w-11 shrink-0 object-contain"
           priority
         />
         <div className="min-w-0">

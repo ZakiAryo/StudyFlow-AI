@@ -14,6 +14,7 @@ StudyFlow AI adalah web app only. MVP ini tidak mencakup native mobile app, Reac
 - Dashboard dinamis dari data Supabase.
 - Statistik tugas: total, selesai, in progress, overdue, deadline hari ini, deadline minggu ini, dan overall progress.
 - Upcoming deadlines dan recent tasks.
+- Jadwal Hari Ini di dashboard berdasarkan jadwal kuliah milik user yang sedang login.
 - CRUD mata kuliah.
 - CRUD jadwal kuliah manual.
 - CRUD tugas akademik.

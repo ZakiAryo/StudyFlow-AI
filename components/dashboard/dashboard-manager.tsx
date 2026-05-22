@@ -9,6 +9,7 @@ import {
   Clock3,
   Flame,
   ListChecks,
+  MapPin,
   Plus,
   RefreshCw,
   TrendingUp,
@@ -29,7 +30,20 @@ type TaskStatus = "not_started" | "in_progress" | "revision" | "completed";
 type Course = {
   id: string;
   name: string;
+  lecturer_name: string | null;
   color_label: string;
+};
+
+type ScheduleSession = {
+  id: string;
+  user_id: string;
+  course_id: string;
+  day_of_week: string;
+  start_time: string;
+  end_time: string;
+  room: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 type Task = {
@@ -46,10 +60,47 @@ type Task = {
   updated_at: string;
 };
 
+const dayLabels = [
+  "Minggu",
+  "Senin",
+  "Selasa",
+  "Rabu",
+  "Kamis",
+  "Jumat",
+  "Sabtu",
+];
+
+const dayVariants: Record<number, string[]> = {
+  0: ["sunday", "minggu"],
+  1: ["monday", "senin"],
+  2: ["tuesday", "selasa"],
+  3: ["wednesday", "rabu"],
+  4: ["thursday", "kamis"],
+  5: ["friday", "jumat", "jum'at"],
+  6: ["saturday", "sabtu"],
+};
+
+function getTodayDayInfo() {
+  const dayIndex = new Date().getDay();
+
+  return {
+    label: dayLabels[dayIndex],
+    values: new Set(dayVariants[dayIndex]),
+  };
+}
+
+function normalizeDay(value: string) {
+  return value.trim().toLowerCase();
+}
+
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("id-ID", {
     dateStyle: "medium",
   }).format(new Date(`${value}T00:00:00`));
+}
+
+function formatTime(value: string) {
+  return value.slice(0, 5);
 }
 
 function sortByDeadline(a: Task, b: Task) {
@@ -82,6 +133,7 @@ function DashboardSkeleton() {
           <div key={item} className="h-36 animate-pulse rounded-lg bg-muted" />
         ))}
       </div>
+      <div className="h-72 animate-pulse rounded-lg bg-muted" />
       <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
         <div className="h-96 animate-pulse rounded-lg bg-muted" />
         <div className="h-96 animate-pulse rounded-lg bg-muted" />
@@ -153,12 +205,26 @@ export function DashboardManager() {
   const router = useRouter();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
+  const [scheduleSessions, setScheduleSessions] = useState<ScheduleSession[]>(
+    [],
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const todayInfo = useMemo(() => getTodayDayInfo(), []);
 
   const courseById = useMemo(
     () => new Map(courses.map((course) => [course.id, course])),
     [courses],
+  );
+
+  const todaySchedule = useMemo(
+    () =>
+      scheduleSessions
+        .filter((session) =>
+          todayInfo.values.has(normalizeDay(session.day_of_week)),
+        )
+        .sort((a, b) => a.start_time.localeCompare(b.start_time)),
+    [scheduleSessions, todayInfo],
   );
 
   const metrics = useMemo(() => {
@@ -273,7 +339,7 @@ export function DashboardManager() {
         return;
       }
 
-      const [tasksResult, coursesResult] = await Promise.all([
+      const [tasksResult, coursesResult, scheduleResult] = await Promise.all([
         supabase
           .from("tasks")
           .select(
@@ -283,9 +349,16 @@ export function DashboardManager() {
           .order("deadline", { ascending: true }),
         supabase
           .from("courses")
-          .select("id,name,color_label")
+          .select("id,name,lecturer_name,color_label")
           .eq("user_id", user.id)
           .order("name", { ascending: true }),
+        supabase
+          .from("schedule_sessions")
+          .select(
+            "id,user_id,course_id,day_of_week,start_time,end_time,room,created_at,updated_at",
+          )
+          .eq("user_id", user.id)
+          .order("start_time", { ascending: true }),
       ]);
 
       if (tasksResult.error) {
@@ -296,8 +369,13 @@ export function DashboardManager() {
         throw coursesResult.error;
       }
 
+      if (scheduleResult.error) {
+        throw scheduleResult.error;
+      }
+
       setTasks((tasksResult.data ?? []) as Task[]);
       setCourses((coursesResult.data ?? []) as Course[]);
+      setScheduleSessions((scheduleResult.data ?? []) as ScheduleSession[]);
     } catch (loadError) {
       setError(
         loadError instanceof Error
@@ -359,6 +437,80 @@ export function DashboardManager() {
         {statCards.map((stat) => (
           <DashboardCard key={stat.label} {...stat} />
         ))}
+      </section>
+
+      <section className="rounded-lg border bg-card p-5 shadow-soft">
+        <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
+          <div>
+            <h2 className="text-lg font-semibold">Jadwal Hari Ini</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {todayInfo.label}, diurutkan berdasarkan jam mulai.
+            </p>
+          </div>
+          <Link
+            href="/schedule"
+            className="inline-flex h-9 items-center justify-center rounded-md border px-3 text-sm font-medium hover:bg-muted"
+          >
+            Kelola jadwal
+          </Link>
+        </div>
+
+        {todaySchedule.length === 0 ? (
+          <div className="mt-5 rounded-lg border border-dashed p-6 text-center">
+            <CalendarClock className="mx-auto h-6 w-6 text-muted-foreground" />
+            <p className="mt-3 font-medium">
+              Tidak ada jadwal kuliah hari ini.
+            </p>
+          </div>
+        ) : (
+          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {todaySchedule.map((session) => {
+              const course = courseById.get(session.course_id);
+
+              return (
+                <article
+                  key={session.id}
+                  className="rounded-lg border bg-background p-4 transition hover:bg-muted/50"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="h-2.5 w-2.5 shrink-0 rounded-full"
+                          style={{
+                            backgroundColor:
+                              course?.color_label ?? "#64748b",
+                          }}
+                        />
+                        <p className="truncate text-sm font-semibold">
+                          {course?.name ?? "Mata kuliah terhapus"}
+                        </p>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {course?.lecturer_name ?? "Dosen belum diisi"}
+                      </p>
+                    </div>
+                    <span className="shrink-0 rounded-md bg-muted px-2 py-1 text-xs font-semibold">
+                      {formatTime(session.start_time)}
+                    </span>
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                    <span className="inline-flex items-center gap-2">
+                      <Clock3 className="h-4 w-4" />
+                      {formatTime(session.start_time)} -{" "}
+                      {formatTime(session.end_time)}
+                    </span>
+                    <span className="inline-flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
+                      {session.room?.trim() || "Ruang belum diisi"}
+                    </span>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       {tasks.length === 0 ? (

@@ -6,7 +6,7 @@ Project ini dibuat sebagai portfolio full-stack modern dengan Next.js App Router
 
 ## Catatan MVP
 
-StudyFlow AI adalah web app only. MVP ini tidak mencakup native mobile app, React Native, Expo, PWA, push notification, OCR, reminder otomatis, import Google Calendar, atau import jadwal otomatis.
+StudyFlow AI adalah web app only. MVP ini tidak mencakup native mobile app, React Native, Expo, PWA, push notification browser/mobile, OCR, import Google Calendar, atau import jadwal otomatis.
 
 ## Fitur Utama
 
@@ -17,6 +17,7 @@ StudyFlow AI adalah web app only. MVP ini tidak mencakup native mobile app, Reac
 - Jadwal Hari Ini di dashboard berdasarkan jadwal kuliah milik user yang sedang login.
 - CRUD mata kuliah.
 - CRUD jadwal kuliah manual.
+- WhatsApp reminder opt-in untuk deadline, overdue task, dan jadwal kuliah harian.
 - CRUD tugas akademik.
 - Filter tugas: all, today, this week, overdue, completed.
 - Search tugas berdasarkan judul.
@@ -64,6 +65,8 @@ app/
     priority/
     study-plan/
     summarize-notes/
+  api/cron/
+    reminders/
   login/
   register/
 
@@ -74,6 +77,7 @@ components/
   dashboard/
   layout/
   schedule/
+  settings/
   tasks/
   theme/
   ui/
@@ -81,8 +85,10 @@ components/
 lib/
   deadline.ts
   gemini.ts
+  supabase-admin.ts
   supabase.ts
   utils.ts
+  whatsapp.ts
 
 database/
   schema.sql
@@ -141,7 +147,14 @@ Isi `.env.local`:
 ```env
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 GEMINI_API_KEY=your_gemini_api_key
+WHATSAPP_ACCESS_TOKEN=your_meta_whatsapp_access_token
+WHATSAPP_PHONE_NUMBER_ID=your_meta_whatsapp_phone_number_id
+WHATSAPP_GRAPH_API_VERSION=v23.0
+WHATSAPP_TEMPLATE_NAME=your_approved_whatsapp_template_name
+WHATSAPP_TEMPLATE_LANGUAGE=id
+CRON_SECRET=your_random_cron_secret_at_least_16_chars
 ```
 
 Jangan menaruh API key asli di `.env.example`, README, screenshot, atau file source code.
@@ -181,8 +194,22 @@ Schema akan membuat tabel:
 - `study_plans`
 - `study_plan_items`
 - `ai_suggestions`
+- `user_notification_settings`
+- `whatsapp_reminder_logs`
 
 Schema juga mengaktifkan Row Level Security agar user hanya bisa mengakses data miliknya sendiri.
+
+## WhatsApp Reminder
+
+Reminder WhatsApp bersifat opt-in. User bisa membuka halaman `Settings`, mengisi nomor WhatsApp, lalu mengaktifkan atau mematikan reminder. Jika toggle mati, cron tidak akan mengirim reminder ke nomor tersebut.
+
+Pengiriman otomatis memakai route server-side:
+
+```txt
+app/api/cron/reminders/route.ts
+```
+
+Route ini membaca `user_notification_settings`, membuat log di `whatsapp_reminder_logs`, lalu mengirim pesan lewat WhatsApp Cloud API hanya dari backend. Secret WhatsApp dan Supabase service role tidak boleh dipakai di frontend.
 
 ## Cara Deploy ke Vercel
 
@@ -194,11 +221,20 @@ Schema juga mengaktifkan Row Level Security agar user hanya bisa mengakses data 
 6. Tambahkan environment variables:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
    - `GEMINI_API_KEY`
+   - `WHATSAPP_ACCESS_TOKEN`
+   - `WHATSAPP_PHONE_NUMBER_ID`
+   - `WHATSAPP_GRAPH_API_VERSION`
+   - `WHATSAPP_TEMPLATE_NAME`
+   - `WHATSAPP_TEMPLATE_LANGUAGE`
+   - `CRON_SECRET`
 7. Klik Deploy.
 8. Setelah deploy selesai, test register, login, dashboard, CRUD, dan fitur AI.
 
 Jika environment variable di Vercel diubah setelah deploy, lakukan redeploy agar nilai baru dipakai.
+
+Cron WhatsApp reminder didefinisikan di `vercel.json` dan berjalan setiap hari pukul `00:00 UTC`, setara sekitar `07:00 WIB`. Jika ingin jadwal lebih sering, sesuaikan `schedule` dan pastikan plan Vercel mendukung frekuensi tersebut.
 
 ## Future Improvements
 
@@ -207,8 +243,8 @@ Fitur berikut hanya rencana lanjutan, bukan bagian MVP:
 - PWA support.
 - Add to Home Screen.
 - Browser notification reminder.
-- Task deadline reminder.
-- Class schedule reminder.
+- Reminder browser untuk deadline tugas.
+- Reminder browser untuk jadwal kuliah.
 - Google Calendar integration.
 - Import jadwal dari CSV.
 - Import jadwal dari PDF atau screenshot menggunakan OCR/AI.
@@ -219,8 +255,9 @@ Fitur berikut hanya rencana lanjutan, bukan bagian MVP:
 
 - `.env.local` wajib masuk `.gitignore`.
 - `.env.example` hanya berisi placeholder.
-- Jangan hardcode Supabase key atau Gemini key.
+- Jangan hardcode Supabase key, Gemini key, WhatsApp token, atau cron secret.
 - `GEMINI_API_KEY` hanya dibaca di server-side API routes.
+- `SUPABASE_SERVICE_ROLE_KEY`, `WHATSAPP_ACCESS_TOKEN`, dan `CRON_SECRET` hanya boleh dipakai di server-side route.
 - Aktifkan RLS di Supabase.
 - Query data user harus dibatasi dengan `user_id` dan `auth.uid()`.
 
@@ -228,4 +265,6 @@ Fitur berikut hanya rencana lanjutan, bukan bagian MVP:
 
 - Supabase Row Level Security: <https://supabase.com/docs/guides/database/postgres/row-level-security>
 - Vercel Environment Variables: <https://vercel.com/docs/projects/environment-variables>
+- Vercel Cron Jobs: <https://vercel.com/docs/cron-jobs>
+- WhatsApp Cloud API: <https://developers.facebook.com/docs/whatsapp/cloud-api>
 - Gemini API Key: <https://ai.google.dev/gemini-api/docs/api-key>

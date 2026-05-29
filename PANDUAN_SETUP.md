@@ -10,6 +10,7 @@ Panduan ini menjelaskan cara menjalankan StudyFlow AI secara lokal, menyiapkan S
 - Akun GitHub.
 - Akun Supabase.
 - Gemini API key dari Google AI Studio.
+- Akun Meta Developer atau WhatsApp Business Cloud API jika ingin mengaktifkan reminder WhatsApp.
 - Akun Vercel.
 
 ## Cara Install Node.js
@@ -116,6 +117,22 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=anon_key_dari_supabase
 
 Anon key boleh digunakan oleh Supabase client di frontend, tetapi akses data tetap dikunci oleh RLS.
 
+## Cara Mendapatkan Supabase Service Role Key
+
+Service role key dipakai hanya oleh backend cron untuk membaca user yang mengaktifkan WhatsApp reminder.
+
+1. Buka dashboard project Supabase.
+2. Masuk ke Project Settings.
+3. Pilih API.
+4. Salin `service_role` key.
+5. Masukkan ke `.env.local`:
+
+```env
+SUPABASE_SERVICE_ROLE_KEY=service_role_key_dari_supabase
+```
+
+Jangan pernah memakai `SUPABASE_SERVICE_ROLE_KEY` di frontend. Jangan upload key ini ke GitHub.
+
 ## Cara Mendapatkan Gemini API Key dari Google AI Studio
 
 1. Buka <https://aistudio.google.com/>.
@@ -158,10 +175,60 @@ Isi `.env.local`:
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://project-id.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=anon_key_dari_supabase
+SUPABASE_SERVICE_ROLE_KEY=service_role_key_dari_supabase
 GEMINI_API_KEY=api_key_dari_google_ai_studio
+WHATSAPP_ACCESS_TOKEN=token_whatsapp_cloud_api
+WHATSAPP_PHONE_NUMBER_ID=phone_number_id_whatsapp
+WHATSAPP_GRAPH_API_VERSION=v23.0
+WHATSAPP_TEMPLATE_NAME=nama_template_whatsapp_yang_disetujui
+WHATSAPP_TEMPLATE_LANGUAGE=id
+CRON_SECRET=random_secret_minimal_16_karakter
 ```
 
 Pastikan `.env.local` tidak diupload ke GitHub.
+
+## Cara Menyiapkan WhatsApp Cloud API
+
+Fitur WhatsApp reminder bersifat opt-in. Jika environment WhatsApp belum diisi, fitur Settings tetap bisa menyimpan preferensi, tetapi cron tidak bisa mengirim pesan asli.
+
+1. Buka <https://developers.facebook.com/>.
+2. Buat atau pilih Meta App yang memiliki produk WhatsApp.
+3. Buka WhatsApp API Setup.
+4. Salin temporary/permanent access token ke `WHATSAPP_ACCESS_TOKEN`.
+5. Salin Phone Number ID ke `WHATSAPP_PHONE_NUMBER_ID`.
+6. Buat message template reminder di WhatsApp Manager dan tunggu sampai disetujui.
+7. Masukkan nama template ke `WHATSAPP_TEMPLATE_NAME`.
+8. Masukkan kode bahasa template ke `WHATSAPP_TEMPLATE_LANGUAGE`, contoh `id` atau `en_US`.
+
+Template yang paling aman untuk project ini adalah template body dengan 4 variable:
+
+```txt
+{{1}}
+{{2}}
+{{3}}
+{{4}}
+```
+
+Untuk reminder tugas, StudyFlow mengirim variable: judul tugas, nama mata kuliah, deadline, dan progress. Untuk reminder jadwal, StudyFlow mengirim variable: judul reminder, jumlah sesi, tanggal, dan saran singkat.
+
+Catatan: untuk pesan otomatis yang dikirim lebih dulu oleh sistem, WhatsApp biasanya membutuhkan template message yang sudah disetujui Meta.
+
+## Cara Menyiapkan Cron Reminder di Vercel
+
+Project ini memakai `vercel.json`:
+
+```json
+{
+  "crons": [
+    {
+      "path": "/api/cron/reminders",
+      "schedule": "0 0 * * *"
+    }
+  ]
+}
+```
+
+Jadwal `0 0 * * *` berjalan pada `00:00 UTC`, sekitar `07:00 WIB`. Route cron dilindungi dengan `CRON_SECRET`. Tambahkan `CRON_SECRET` yang sama di `.env.local` dan Vercel Environment Variables.
 
 ## Cara Menjalankan Project di Localhost
 
@@ -226,7 +293,14 @@ Pastikan `.env.local` tidak muncul di daftar file.
 ```env
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 GEMINI_API_KEY=your_gemini_api_key
+WHATSAPP_ACCESS_TOKEN=your_meta_whatsapp_access_token
+WHATSAPP_PHONE_NUMBER_ID=your_meta_whatsapp_phone_number_id
+WHATSAPP_GRAPH_API_VERSION=v23.0
+WHATSAPP_TEMPLATE_NAME=your_approved_whatsapp_template_name
+WHATSAPP_TEMPLATE_LANGUAGE=id
+CRON_SECRET=your_random_cron_secret_at_least_16_chars
 ```
 
 5. Pilih environment Production, Preview, dan Development jika ingin semua deployment memakai value yang sama.
@@ -320,6 +394,25 @@ Solusi:
 - Masukkan key ke Vercel Environment Variables.
 - Cek server logs untuk melihat error API route.
 
+### WhatsApp reminder tidak terkirim
+
+Penyebab:
+
+- User belum mengaktifkan toggle WhatsApp reminder di Settings.
+- Nomor WhatsApp belum memakai format internasional, contoh `62812xxxx`.
+- `WHATSAPP_ACCESS_TOKEN` atau `WHATSAPP_PHONE_NUMBER_ID` kosong/salah.
+- Template WhatsApp belum disetujui Meta.
+- `CRON_SECRET` di Vercel tidak sama dengan environment route.
+- Cron Vercel belum berjalan karena project belum deploy production.
+
+Solusi:
+
+- Aktifkan toggle di Settings.
+- Cek tabel `whatsapp_reminder_logs` untuk status `failed` dan pesan error.
+- Pastikan semua environment variables sudah ditambahkan di Vercel.
+- Redeploy setelah mengubah environment variables.
+- Jalankan endpoint cron dengan `?dryRun=1` saat development untuk melihat kandidat reminder tanpa mengirim pesan.
+
 ### Build gagal di Vercel
 
 Penyebab:
@@ -340,4 +433,6 @@ Solusi:
 
 - Supabase Row Level Security: <https://supabase.com/docs/guides/database/postgres/row-level-security>
 - Vercel Environment Variables: <https://vercel.com/docs/projects/environment-variables>
+- Vercel Cron Jobs: <https://vercel.com/docs/cron-jobs>
+- WhatsApp Cloud API: <https://developers.facebook.com/docs/whatsapp/cloud-api>
 - Google AI Studio dan Gemini API key: <https://ai.google.dev/gemini-api/docs/api-key>

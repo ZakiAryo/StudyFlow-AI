@@ -134,6 +134,53 @@ create table if not exists public.ai_suggestions (
   )
 );
 
+create table if not exists public.user_notification_settings (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null unique default auth.uid() references auth.users(id) on delete cascade,
+  whatsapp_number text,
+  whatsapp_reminder_enabled boolean not null default false,
+  remind_deadline_tomorrow boolean not null default true,
+  remind_deadline_today boolean not null default true,
+  remind_overdue_tasks boolean not null default true,
+  remind_today_schedule boolean not null default false,
+  reminder_time time not null default '07:00',
+  timezone text not null default 'Asia/Bangkok',
+  created_at timestamptz not null default timezone('utc'::text, now()),
+  updated_at timestamptz not null default timezone('utc'::text, now()),
+  constraint user_notification_settings_whatsapp_number_check check (
+    whatsapp_number is null
+    or whatsapp_number ~ '^\+?[1-9][0-9]{7,14}$'
+  )
+);
+
+create table if not exists public.whatsapp_reminder_logs (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  task_id uuid references public.tasks(id) on delete cascade,
+  schedule_session_id uuid references public.schedule_sessions(id) on delete cascade,
+  reminder_type text not null,
+  reminder_date date not null,
+  whatsapp_number text not null,
+  message text not null,
+  status text not null default 'pending',
+  provider_message_id text,
+  error_message text,
+  sent_at timestamptz,
+  created_at timestamptz not null default timezone('utc'::text, now()),
+  constraint whatsapp_reminder_logs_type_check check (
+    reminder_type in (
+      'deadline_tomorrow',
+      'deadline_today',
+      'overdue_task',
+      'today_schedule',
+      'test_message'
+    )
+  ),
+  constraint whatsapp_reminder_logs_status_check check (
+    status in ('pending', 'sent', 'failed', 'skipped')
+  )
+);
+
 create index if not exists courses_user_id_idx on public.courses(user_id);
 create index if not exists schedule_sessions_user_id_idx on public.schedule_sessions(user_id);
 create index if not exists schedule_sessions_course_id_idx on public.schedule_sessions(course_id);
@@ -145,6 +192,18 @@ create index if not exists task_notes_task_id_idx on public.task_notes(task_id);
 create index if not exists study_plans_task_id_idx on public.study_plans(task_id);
 create index if not exists study_plan_items_plan_id_idx on public.study_plan_items(study_plan_id);
 create index if not exists ai_suggestions_user_id_idx on public.ai_suggestions(user_id);
+create index if not exists user_notification_settings_user_id_idx on public.user_notification_settings(user_id);
+create index if not exists whatsapp_reminder_logs_user_id_idx on public.whatsapp_reminder_logs(user_id);
+create index if not exists whatsapp_reminder_logs_reminder_date_idx on public.whatsapp_reminder_logs(reminder_date);
+create unique index if not exists whatsapp_reminder_logs_task_once_idx
+on public.whatsapp_reminder_logs(user_id, task_id, reminder_type, reminder_date)
+where task_id is not null;
+create unique index if not exists whatsapp_reminder_logs_schedule_once_idx
+on public.whatsapp_reminder_logs(user_id, schedule_session_id, reminder_type, reminder_date)
+where schedule_session_id is not null;
+create unique index if not exists whatsapp_reminder_logs_general_once_idx
+on public.whatsapp_reminder_logs(user_id, reminder_type, reminder_date)
+where task_id is null and schedule_session_id is null;
 
 drop trigger if exists set_courses_updated_at on public.courses;
 create trigger set_courses_updated_at
@@ -171,12 +230,21 @@ create trigger set_task_notes_updated_at
 before update on public.task_notes
 for each row execute function public.set_updated_at();
 
+drop trigger if exists set_user_notification_settings_updated_at on public.user_notification_settings;
+create trigger set_user_notification_settings_updated_at
+before update on public.user_notification_settings
+for each row execute function public.set_updated_at();
+
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
   insert into public.profiles (id, full_name)
   values (new.id, coalesce(new.raw_user_meta_data->>'full_name', ''))
   on conflict (id) do nothing;
+
+  insert into public.user_notification_settings (user_id)
+  values (new.id)
+  on conflict (user_id) do nothing;
 
   return new;
 end;
@@ -196,6 +264,8 @@ alter table public.task_notes enable row level security;
 alter table public.study_plans enable row level security;
 alter table public.study_plan_items enable row level security;
 alter table public.ai_suggestions enable row level security;
+alter table public.user_notification_settings enable row level security;
+alter table public.whatsapp_reminder_logs enable row level security;
 
 drop policy if exists "Profiles are viewable by owner" on public.profiles;
 create policy "Profiles are viewable by owner"
@@ -323,3 +393,16 @@ with check (
     )
   )
 );
+
+drop policy if exists "Users can manage own notification settings" on public.user_notification_settings;
+create policy "Users can manage own notification settings"
+on public.user_notification_settings for all
+to authenticated
+using (user_id = auth.uid())
+with check (user_id = auth.uid());
+
+drop policy if exists "Users can view own WhatsApp reminder logs" on public.whatsapp_reminder_logs;
+create policy "Users can view own WhatsApp reminder logs"
+on public.whatsapp_reminder_logs for select
+to authenticated
+using (user_id = auth.uid());

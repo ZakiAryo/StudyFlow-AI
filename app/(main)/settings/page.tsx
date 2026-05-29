@@ -1,14 +1,18 @@
 import { Github, Link2, Linkedin, Palette, UserRound } from "lucide-react";
 
+import { WhatsAppReminderSettings } from "@/components/settings/whatsapp-reminder-settings";
+
 export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-semibold tracking-normal">Settings</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Placeholder pengaturan profil, tema, dan link portfolio.
+          Pengaturan profil, link portfolio, dan reminder WhatsApp.
         </p>
       </div>
+
+      <WhatsAppReminderSettings />
 
       <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
         <article className="rounded-lg border bg-card p-5 shadow-soft">

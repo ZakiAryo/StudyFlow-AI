@@ -6,7 +6,7 @@ Panduan ini membantu kamu mengubah StudyFlow AI agar cocok untuk kebutuhan portf
 
 Jangan upload API key ke GitHub. File `.env.local` harus tetap lokal dan tidak boleh masuk repository.
 
-Jangan pernah menulis `GEMINI_API_KEY` di React component, client-side file, README, screenshot, atau dokumentasi publik. Gunakan `.env.example` hanya untuk placeholder.
+Jangan pernah menulis `GEMINI_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `WHATSAPP_ACCESS_TOKEN`, atau `CRON_SECRET` di React component, client-side file, README, screenshot, atau dokumentasi publik. Gunakan `.env.example` hanya untuk placeholder.
 
 ## Cara Mengganti Nama Aplikasi
 
@@ -301,6 +301,58 @@ Aturan penting:
 - Validasi response JSON sebelum ditampilkan atau disimpan.
 - Jangan mengirim data user yang tidak diperlukan.
 
+## Cara Custom WhatsApp Reminder
+
+File yang diedit:
+
+- `components/settings/whatsapp-reminder-settings.tsx`
+- `app/api/cron/reminders/route.ts`
+- `lib/whatsapp.ts`
+- `database/schema.sql`
+- `vercel.json`
+
+Default reminder WhatsApp adalah mati. User harus mengaktifkan toggle di halaman `Settings`.
+
+Before:
+
+```ts
+whatsapp_reminder_enabled: false
+```
+
+After jika ingin default aktif untuk row baru:
+
+```sql
+whatsapp_reminder_enabled boolean not null default true
+```
+
+Rekomendasi: biarkan default tetap `false` agar user benar-benar opt-in.
+
+Untuk mengganti jam cron Vercel, edit `vercel.json`:
+
+```json
+{
+  "path": "/api/cron/reminders",
+  "schedule": "0 0 * * *"
+}
+```
+
+Jadwal Vercel memakai UTC. `0 0 * * *` berarti sekitar pukul `07:00 WIB`.
+
+Untuk mengganti format pesan, edit function pembuat pesan di:
+
+```txt
+app/api/cron/reminders/route.ts
+```
+
+Bagian yang biasanya diedit:
+
+- `buildTaskMessage`
+- `buildScheduleMessage`
+
+Jika memakai WhatsApp template, pastikan jumlah variable template sesuai dengan `templateParameters` yang dikirim dari route cron.
+
+Jangan mengirim token WhatsApp dari frontend. Semua request WhatsApp harus tetap lewat server-side route.
+
 ## Cara Memasukkan atau Mengganti Supabase URL
 
 File lokal:
@@ -316,6 +368,7 @@ Contoh:
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://project-id.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=anon_key_baru
+SUPABASE_SERVICE_ROLE_KEY=service_role_key_baru
 ```
 
 Setelah mengganti `.env.local`, restart development server.
@@ -338,6 +391,29 @@ GEMINI_API_KEY=api_key_baru
 
 Jangan masukkan Gemini API key asli ke `.env.example`.
 
+## Cara Memasukkan atau Mengganti WhatsApp API Key
+
+File lokal:
+
+- `.env.local`
+
+Tempat production:
+
+- Vercel Environment Variables.
+
+Contoh:
+
+```env
+WHATSAPP_ACCESS_TOKEN=token_whatsapp_cloud_api_baru
+WHATSAPP_PHONE_NUMBER_ID=phone_number_id_baru
+WHATSAPP_GRAPH_API_VERSION=v23.0
+WHATSAPP_TEMPLATE_NAME=nama_template_baru
+WHATSAPP_TEMPLATE_LANGUAGE=id
+CRON_SECRET=random_secret_baru
+```
+
+Setelah mengganti value WhatsApp di Vercel, redeploy project. Jangan masukkan token asli ke `.env.example`.
+
 ## Cara Memasukkan Environment Variables di Vercel
 
 1. Buka dashboard Vercel.
@@ -349,7 +425,14 @@ Jangan masukkan Gemini API key asli ke `.env.example`.
 ```env
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 GEMINI_API_KEY=your_gemini_api_key
+WHATSAPP_ACCESS_TOKEN=your_meta_whatsapp_access_token
+WHATSAPP_PHONE_NUMBER_ID=your_meta_whatsapp_phone_number_id
+WHATSAPP_GRAPH_API_VERSION=v23.0
+WHATSAPP_TEMPLATE_NAME=your_approved_whatsapp_template_name
+WHATSAPP_TEMPLATE_LANGUAGE=id
+CRON_SECRET=your_random_cron_secret_at_least_16_chars
 ```
 
 6. Pilih environment yang dibutuhkan.
@@ -371,14 +454,17 @@ GEMINI_API_KEY=your_gemini_api_key
 | Warna mata kuliah | `database/schema.sql`, `components/courses/course-manager.tsx` |
 | Priority badges | `database/schema.sql`, `components/tasks/priority-badge.tsx`, `components/tasks/task-manager.tsx` |
 | AI prompt behavior | `app/api/ai/*/route.ts`, `lib/gemini.ts` |
+| WhatsApp reminder | `components/settings/whatsapp-reminder-settings.tsx`, `app/api/cron/reminders/route.ts`, `lib/whatsapp.ts`, `vercel.json`, `database/schema.sql` |
 | Supabase URL | `.env.local`, Vercel Environment Variables |
 | Gemini API key | `.env.local`, Vercel Environment Variables |
+| WhatsApp API key | `.env.local`, Vercel Environment Variables |
 
 ## Checklist Sebelum Upload ke GitHub
 
 - `.env.local` tidak ikut commit.
 - `.env.example` hanya berisi placeholder.
 - Tidak ada API key di README, screenshot, source code, atau commit history.
+- Tidak ada WhatsApp access token atau Supabase service role key di repository.
 - Tidak ada database password di repository.
 - Folder `docs/screenshots/` tersedia.
 - Dokumentasi menggunakan Bahasa Indonesia.

@@ -212,6 +212,8 @@ export function TaskMaterialsManager({
         : score;
     }, 0);
   }, [quizAnswers, quizResult, quizSubmitted]);
+  const quizTotal = quizResult?.questions.length ?? 0;
+  const quizScoreRatio = quizTotal > 0 ? quizScore / quizTotal : 0;
 
   const loadMaterials = useCallback(async () => {
     setIsLoading(true);
@@ -800,6 +802,8 @@ export function TaskMaterialsManager({
                             const correct =
                               quizSubmitted &&
                               question.correct_answer_index === optionIndex;
+                            const selectedWrong =
+                              quizSubmitted && selected && !correct;
 
                             return (
                               <label
@@ -810,6 +814,8 @@ export function TaskMaterialsManager({
                                   selected && !quizSubmitted && "border-primary",
                                   correct &&
                                     "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300",
+                                  selectedWrong &&
+                                    "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300",
                                 )}
                               >
                                 <input
@@ -825,7 +831,19 @@ export function TaskMaterialsManager({
                                   }
                                   className="mt-1 h-4 w-4 accent-primary"
                                 />
-                                <span>{option}</span>
+                                <span className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                                  <span className="min-w-0 flex-1">{option}</span>
+                                  {correct ? (
+                                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-900 dark:text-emerald-200">
+                                      Benar
+                                    </span>
+                                  ) : null}
+                                  {selectedWrong ? (
+                                    <span className="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-semibold text-rose-700 dark:bg-rose-900 dark:text-rose-200">
+                                      Pilihan kamu
+                                    </span>
+                                  ) : null}
+                                </span>
                               </label>
                             );
                           })}
@@ -835,25 +853,62 @@ export function TaskMaterialsManager({
                   </div>
 
                   {quizSubmitted ? (
-                    <section className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300">
-                      <div className="flex items-center gap-2">
-                        <Trophy className="h-5 w-5" />
+                    <section className="rounded-lg border p-4">
+                      <div
+                        className={cn(
+                          "flex items-center gap-2 rounded-md border p-3",
+                          quizScoreRatio >= 0.8 &&
+                            "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300",
+                          quizScoreRatio >= 0.5 &&
+                            quizScoreRatio < 0.8 &&
+                            "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300",
+                          quizScoreRatio < 0.5 &&
+                            "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300",
+                        )}
+                      >
+                        <Trophy className="h-5 w-5 shrink-0" />
                         <h3 className="font-semibold">
                           Skor: {quizScore}/{quizResult.questions.length}
                         </h3>
                       </div>
                       <div className="mt-4 space-y-3">
                         <p className="text-sm font-semibold">Jawaban benar</p>
-                        {quizResult.questions.map((question, index) => (
-                          <div key={question.id} className="rounded-md bg-background/70 p-3 text-sm">
-                            <p className="font-medium">
-                              {index + 1}. {question.question}
-                            </p>
-                            <p className="mt-1">
-                              {question.options[question.correct_answer_index]}
-                            </p>
-                          </div>
-                        ))}
+                        {quizResult.questions.map((question, index) => {
+                          const selectedAnswer = quizAnswers[question.id];
+                          const isCorrect =
+                            selectedAnswer === question.correct_answer_index;
+
+                          return (
+                            <div
+                              key={question.id}
+                              className="rounded-md bg-muted/60 p-3 text-sm"
+                            >
+                              <p className="font-medium">
+                                {index + 1}. {question.question}
+                              </p>
+                              <p className="mt-2 text-emerald-700 dark:text-emerald-300">
+                                <span className="font-semibold">
+                                  Jawaban benar:
+                                </span>{" "}
+                                {
+                                  question.options[
+                                    question.correct_answer_index
+                                  ]
+                                }
+                              </p>
+                              {!isCorrect ? (
+                                <p className="mt-1 text-rose-700 dark:text-rose-300">
+                                  <span className="font-semibold">
+                                    Jawaban kamu:
+                                  </span>{" "}
+                                  {selectedAnswer === undefined
+                                    ? "Belum dijawab"
+                                    : question.options[selectedAnswer]}
+                                </p>
+                              ) : null}
+                            </div>
+                          );
+                        })}
                       </div>
                     </section>
                   ) : null}

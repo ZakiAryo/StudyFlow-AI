@@ -9,6 +9,8 @@ import {
   FileQuestion,
   GraduationCap,
   LayoutDashboard,
+  PanelLeftClose,
+  PanelLeftOpen,
   Settings,
   Sparkles,
   X,
@@ -27,31 +29,68 @@ const navItems = [
 
 export function Sidebar({
   isOpen,
+  isCollapsed,
   onClose,
+  onToggleCollapse,
 }: {
   isOpen?: boolean;
+  isCollapsed?: boolean;
   onClose?: () => void;
+  onToggleCollapse?: () => void;
 }) {
   const pathname = usePathname();
 
-  const content = (
-    <aside className="flex h-full w-72 flex-col border-r bg-card">
-      <div className="flex h-16 items-center gap-3 border-b px-5">
+  const renderContent = (collapsed = false) => (
+    <aside
+      className={cn(
+        "flex h-full flex-col border-r bg-card transition-[width] duration-200",
+        collapsed ? "w-20" : "w-72",
+      )}
+    >
+      <div
+        className={cn(
+          "flex h-16 items-center border-b",
+          collapsed ? "justify-center px-3" : "gap-3 px-5",
+        )}
+      >
         <Image
           src="/logo.png"
           alt="Logo StudyFlow AI"
           width={250}
           height={250}
-          className="h-11 w-11 shrink-0 object-contain"
+          className={cn(
+            "shrink-0 object-contain",
+            collapsed ? "h-9 w-9" : "h-11 w-11",
+          )}
           priority
         />
-        <div className="min-w-0">
+        <div className={cn("min-w-0", collapsed && "hidden")}>
           <p className="truncate font-semibold">StudyFlow AI</p>
           <p className="text-xs text-muted-foreground">Academic workspace</p>
         </div>
       </div>
 
       <nav className="flex-1 space-y-1 px-3 py-4">
+        {onToggleCollapse ? (
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            className={cn(
+              "hidden items-center rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground lg:flex",
+              collapsed ? "mx-auto h-10 w-10 justify-center px-0" : "w-full gap-3",
+            )}
+            aria-label={collapsed ? "Perluas sidebar" : "Ciutkan sidebar"}
+            title={collapsed ? "Perluas sidebar" : "Ciutkan sidebar"}
+          >
+            {collapsed ? (
+              <PanelLeftOpen className="h-4 w-4" />
+            ) : (
+              <PanelLeftClose className="h-4 w-4" />
+            )}
+            <span className={cn(collapsed && "hidden")}>Collapse</span>
+          </button>
+        ) : null}
+
         {navItems.map((item) => {
           const active =
             pathname === item.href ||
@@ -62,19 +101,21 @@ export function Sidebar({
               key={item.href}
               href={item.href}
               onClick={onClose}
+              title={item.label}
               className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground",
+                "flex items-center rounded-md py-2 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground",
+                collapsed ? "h-10 justify-center px-0" : "gap-3 px-3",
                 active && "bg-muted text-foreground",
               )}
             >
               <item.icon className="h-4 w-4" />
-              {item.label}
+              <span className={cn(collapsed && "hidden")}>{item.label}</span>
             </Link>
           );
         })}
       </nav>
 
-      <div className="border-t p-4">
+      <div className={cn("border-t p-4", collapsed && "hidden")}>
         <div className="rounded-md bg-background p-3">
           <p className="text-sm font-medium">Akun aktif</p>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
@@ -88,7 +129,7 @@ export function Sidebar({
   return (
     <>
       <div className="hidden min-h-screen lg:fixed lg:inset-y-0 lg:flex">
-        {content}
+        {renderContent(isCollapsed)}
       </div>
 
       {isOpen ? (
@@ -106,7 +147,7 @@ export function Sidebar({
             >
               <X className="h-4 w-4" />
             </button>
-            {content}
+            {renderContent(false)}
           </div>
         </div>
       ) : null}

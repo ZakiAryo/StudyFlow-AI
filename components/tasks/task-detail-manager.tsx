@@ -25,6 +25,7 @@ import {
 import { DeadlineBadge } from "@/components/tasks/deadline-badge";
 import { PriorityBadge } from "@/components/tasks/priority-badge";
 import { StatusBadge } from "@/components/tasks/status-badge";
+import { TaskMaterialsManager } from "@/components/tasks/task-materials-manager";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { getDeadlineLabel, getDeadlineState } from "@/lib/deadline";
 import { createSupabaseClient } from "@/lib/supabase";
@@ -1477,6 +1478,13 @@ export function TaskDetailManager({ taskId }: { taskId: string }) {
           {error}
         </div>
       ) : null}
+
+      <TaskMaterialsManager
+        courseName={course?.name ?? "Mata kuliah"}
+        taskId={task.id}
+        taskTitle={task.title}
+        userId={userId ?? task.user_id}
+      />
 
       <section className="grid gap-4 xl:grid-cols-[0.78fr_1.22fr]">
         <div className="space-y-4">

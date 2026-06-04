@@ -130,7 +130,66 @@ create table if not exists public.ai_suggestions (
   response jsonb not null,
   created_at timestamptz not null default timezone('utc'::text, now()),
   constraint ai_suggestions_type_check check (
-    type in ('task_breakdown', 'study_plan', 'priority', 'notes_summary')
+    type in (
+      'task_breakdown',
+      'study_plan',
+      'priority',
+      'notes_summary',
+      'material_breakdown',
+      'material_quiz'
+    )
+  )
+);
+
+create table if not exists public.task_materials (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  task_id uuid not null references public.tasks(id) on delete cascade,
+  file_name text not null,
+  storage_path text not null unique,
+  mime_type text not null,
+  file_size integer not null,
+  ai_breakdown jsonb,
+  created_at timestamptz not null default timezone('utc'::text, now()),
+  updated_at timestamptz not null default timezone('utc'::text, now()),
+  constraint task_materials_mime_type_check check (
+    mime_type in ('application/pdf', 'text/plain', 'text/markdown')
+  ),
+  constraint task_materials_file_size_check check (
+    file_size > 0 and file_size <= 10485760
+  )
+);
+
+create table if not exists public.material_quiz_attempts (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  task_id uuid not null references public.tasks(id) on delete cascade,
+  material_id uuid not null references public.task_materials(id) on delete cascade,
+  score integer not null default 0,
+  total_questions integer not null default 0,
+  user_answers jsonb not null,
+  correct_answers jsonb not null,
+  created_at timestamptz not null default timezone('utc'::text, now()),
+  constraint material_quiz_attempts_score_check check (
+    score >= 0 and score <= total_questions
+  ),
+  constraint material_quiz_attempts_total_questions_check check (
+    total_questions > 0
+  )
+);
+
+alter table public.ai_suggestions
+drop constraint if exists ai_suggestions_type_check;
+
+alter table public.ai_suggestions
+add constraint ai_suggestions_type_check check (
+  type in (
+    'task_breakdown',
+    'study_plan',
+    'priority',
+    'notes_summary',
+    'material_breakdown',
+    'material_quiz'
   )
 );
 
@@ -192,6 +251,10 @@ create index if not exists task_notes_task_id_idx on public.task_notes(task_id);
 create index if not exists study_plans_task_id_idx on public.study_plans(task_id);
 create index if not exists study_plan_items_plan_id_idx on public.study_plan_items(study_plan_id);
 create index if not exists ai_suggestions_user_id_idx on public.ai_suggestions(user_id);
+create index if not exists task_materials_user_id_idx on public.task_materials(user_id);
+create index if not exists task_materials_task_id_idx on public.task_materials(task_id);
+create index if not exists material_quiz_attempts_user_id_idx on public.material_quiz_attempts(user_id);
+create index if not exists material_quiz_attempts_material_id_idx on public.material_quiz_attempts(material_id);
 create index if not exists user_notification_settings_user_id_idx on public.user_notification_settings(user_id);
 create index if not exists whatsapp_reminder_logs_user_id_idx on public.whatsapp_reminder_logs(user_id);
 create index if not exists whatsapp_reminder_logs_reminder_date_idx on public.whatsapp_reminder_logs(reminder_date);
@@ -230,10 +293,28 @@ create trigger set_task_notes_updated_at
 before update on public.task_notes
 for each row execute function public.set_updated_at();
 
+drop trigger if exists set_task_materials_updated_at on public.task_materials;
+create trigger set_task_materials_updated_at
+before update on public.task_materials
+for each row execute function public.set_updated_at();
+
 drop trigger if exists set_user_notification_settings_updated_at on public.user_notification_settings;
 create trigger set_user_notification_settings_updated_at
 before update on public.user_notification_settings
 for each row execute function public.set_updated_at();
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'task-materials',
+  'task-materials',
+  false,
+  10485760,
+  array['application/pdf', 'text/plain', 'text/markdown']
+)
+on conflict (id) do update set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
 
 create or replace function public.handle_new_user()
 returns trigger as $$
@@ -264,6 +345,8 @@ alter table public.task_notes enable row level security;
 alter table public.study_plans enable row level security;
 alter table public.study_plan_items enable row level security;
 alter table public.ai_suggestions enable row level security;
+alter table public.task_materials enable row level security;
+alter table public.material_quiz_attempts enable row level security;
 alter table public.user_notification_settings enable row level security;
 alter table public.whatsapp_reminder_logs enable row level security;
 
@@ -392,6 +475,74 @@ with check (
       and tasks.user_id = auth.uid()
     )
   )
+);
+
+drop policy if exists "Users can manage own task materials" on public.task_materials;
+create policy "Users can manage own task materials"
+on public.task_materials for all
+to authenticated
+using (user_id = auth.uid())
+with check (
+  user_id = auth.uid()
+  and exists (
+    select 1 from public.tasks
+    where tasks.id = task_materials.task_id
+    and tasks.user_id = auth.uid()
+  )
+);
+
+drop policy if exists "Users can manage own material quiz attempts" on public.material_quiz_attempts;
+create policy "Users can manage own material quiz attempts"
+on public.material_quiz_attempts for all
+to authenticated
+using (user_id = auth.uid())
+with check (
+  user_id = auth.uid()
+  and exists (
+    select 1 from public.task_materials
+    where task_materials.id = material_quiz_attempts.material_id
+    and task_materials.user_id = auth.uid()
+  )
+);
+
+drop policy if exists "Users can upload own task material files" on storage.objects;
+create policy "Users can upload own task material files"
+on storage.objects for insert
+to authenticated
+with check (
+  bucket_id = 'task-materials'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);
+
+drop policy if exists "Users can view own task material files" on storage.objects;
+create policy "Users can view own task material files"
+on storage.objects for select
+to authenticated
+using (
+  bucket_id = 'task-materials'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);
+
+drop policy if exists "Users can update own task material files" on storage.objects;
+create policy "Users can update own task material files"
+on storage.objects for update
+to authenticated
+using (
+  bucket_id = 'task-materials'
+  and (storage.foldername(name))[1] = auth.uid()::text
+)
+with check (
+  bucket_id = 'task-materials'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);
+
+drop policy if exists "Users can delete own task material files" on storage.objects;
+create policy "Users can delete own task material files"
+on storage.objects for delete
+to authenticated
+using (
+  bucket_id = 'task-materials'
+  and (storage.foldername(name))[1] = auth.uid()::text
 );
 
 drop policy if exists "Users can manage own notification settings" on public.user_notification_settings;

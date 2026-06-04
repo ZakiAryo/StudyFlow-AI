@@ -98,8 +98,38 @@ Tabel yang dibuat:
 - `study_plans`
 - `study_plan_items`
 - `ai_suggestions`
+- `task_materials`
+- `material_quiz_attempts`
+- bucket Supabase Storage `task-materials`
+- policy Supabase Storage untuk file materi
+- `user_notification_settings`
+- `whatsapp_reminder_logs`
 
 File schema juga membuat trigger, index, dan Row Level Security policy. RLS penting agar user hanya bisa mengakses data miliknya sendiri.
+
+## Cara Menyiapkan Upload Materi Tugas
+
+Upload materi memakai Supabase Storage bucket `task-materials`. Bucket dan policy dibuat oleh `database/schema.sql`.
+
+Format file yang didukung:
+
+- PDF.
+- TXT.
+- Markdown.
+
+Batas ukuran file:
+
+```txt
+10 MB
+```
+
+Jika upload gagal, cek:
+
+- `database/schema.sql` sudah dijalankan ulang.
+- Bucket `task-materials` ada di Supabase Storage.
+- Policy storage sudah dibuat.
+- User sudah login.
+- File memakai format yang didukung.
 
 ## Cara Mendapatkan Supabase URL dan Anon Key
 
@@ -394,6 +424,24 @@ Solusi:
 - Masukkan key ke Vercel Environment Variables.
 - Cek server logs untuk melihat error API route.
 
+### Upload materi atau quiz AI gagal
+
+Penyebab:
+
+- Bucket `task-materials` belum dibuat.
+- Policy Supabase Storage belum aktif.
+- File lebih dari 10 MB.
+- Format file bukan PDF, TXT, atau Markdown.
+- `GEMINI_API_KEY` belum diisi.
+- `SUPABASE_SERVICE_ROLE_KEY` belum diisi sehingga server tidak bisa membaca file private dari storage.
+
+Solusi:
+
+- Jalankan ulang `database/schema.sql` di Supabase SQL Editor.
+- Pastikan bucket `task-materials` muncul di Supabase Storage.
+- Isi `GEMINI_API_KEY` dan `SUPABASE_SERVICE_ROLE_KEY`.
+- Redeploy Vercel setelah mengubah environment variables.
+
 ### WhatsApp reminder tidak terkirim
 
 Penyebab:
@@ -435,4 +483,5 @@ Solusi:
 - Vercel Environment Variables: <https://vercel.com/docs/projects/environment-variables>
 - Vercel Cron Jobs: <https://vercel.com/docs/cron-jobs>
 - WhatsApp Cloud API: <https://developers.facebook.com/docs/whatsapp/cloud-api>
+- Gemini Document Processing: <https://ai.google.dev/gemini-api/docs/document-processing>
 - Google AI Studio dan Gemini API key: <https://ai.google.dev/gemini-api/docs/api-key>

@@ -22,6 +22,7 @@ StudyFlow AI adalah web app only. MVP ini tidak mencakup native mobile app, Reac
 - Filter tugas: all, today, this week, overdue, completed.
 - Search tugas berdasarkan judul.
 - Detail tugas dengan status, progress, checklist, notes, dan study plan.
+- Upload materi tugas dalam format PDF, TXT, atau Markdown di halaman detail tugas.
 - Checklist per tugas dengan progress tracking.
 - Notes per tugas.
 - Deadline badge: Due Today, Due Tomorrow, Due This Week, Overdue.
@@ -36,6 +37,8 @@ Semua fitur AI memanggil Gemini dari server-side API routes. `GEMINI_API_KEY` ti
 - AI Study Plan Generator: membuat rencana belajar bertahap sebelum deadline.
 - AI Priority Assistant: mengurutkan tugas aktif berdasarkan urgency dan importance.
 - AI Notes Summarizer: merangkum notes menjadi summary, important points, dan suggested next actions.
+- AI Material Breakdown: menganalisis file materi yang diupload di detail tugas.
+- AI Material Quiz: membuat quiz dari materi, menghitung skor, dan menampilkan jawaban benar setelah submit.
 
 ## Tech Stack
 
@@ -62,6 +65,8 @@ app/
       [id]/
   api/ai/
     breakdown/
+    material-breakdown/
+    material-quiz/
     priority/
     study-plan/
     summarize-notes/
@@ -194,10 +199,29 @@ Schema akan membuat tabel:
 - `study_plans`
 - `study_plan_items`
 - `ai_suggestions`
+- `task_materials`
+- `material_quiz_attempts`
 - `user_notification_settings`
 - `whatsapp_reminder_logs`
 
-Schema juga mengaktifkan Row Level Security agar user hanya bisa mengakses data miliknya sendiri.
+Schema juga membuat bucket Supabase Storage `task-materials` untuk file materi dan mengaktifkan Row Level Security agar user hanya bisa mengakses data miliknya sendiri.
+
+## Upload Materi dan Quiz AI
+
+Di halaman detail tugas, user bisa upload materi dalam format:
+
+- PDF.
+- TXT.
+- Markdown.
+
+File disimpan di Supabase Storage bucket `task-materials`. AI breakdown dan quiz diproses melalui server-side API routes:
+
+```txt
+app/api/ai/material-breakdown/route.ts
+app/api/ai/material-quiz/route.ts
+```
+
+Quiz menampilkan pertanyaan pilihan ganda. Setelah user submit, aplikasi menghitung skor dan menampilkan daftar jawaban benar.
 
 ## WhatsApp Reminder
 
@@ -267,4 +291,5 @@ Fitur berikut hanya rencana lanjutan, bukan bagian MVP:
 - Vercel Environment Variables: <https://vercel.com/docs/projects/environment-variables>
 - Vercel Cron Jobs: <https://vercel.com/docs/cron-jobs>
 - WhatsApp Cloud API: <https://developers.facebook.com/docs/whatsapp/cloud-api>
+- Gemini Document Processing: <https://ai.google.dev/gemini-api/docs/document-processing>
 - Gemini API Key: <https://ai.google.dev/gemini-api/docs/api-key>

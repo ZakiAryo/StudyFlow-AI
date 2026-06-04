@@ -353,6 +353,61 @@ Jika memakai WhatsApp template, pastikan jumlah variable template sesuai dengan 
 
 Jangan mengirim token WhatsApp dari frontend. Semua request WhatsApp harus tetap lewat server-side route.
 
+## Cara Custom Upload Materi dan Quiz AI
+
+File yang diedit:
+
+- `components/tasks/task-materials-manager.tsx`
+- `app/api/ai/material-breakdown/route.ts`
+- `app/api/ai/material-quiz/route.ts`
+- `lib/material-ai-server.ts`
+- `lib/gemini.ts`
+- `database/schema.sql`
+
+Format file default:
+
+```txt
+PDF, TXT, Markdown
+```
+
+Batas ukuran default:
+
+```txt
+10 MB
+```
+
+Jika ingin mengganti batas ukuran file, edit:
+
+```ts
+const maxFileSize = 10 * 1024 * 1024;
+```
+
+Jika ingin mengganti jumlah soal quiz default, edit:
+
+```ts
+const [questionCount, setQuestionCount] = useState(5);
+```
+
+Jika ingin mengganti prompt AI breakdown materi, edit:
+
+```txt
+app/api/ai/material-breakdown/route.ts
+```
+
+Jika ingin mengganti prompt AI quiz, edit:
+
+```txt
+app/api/ai/material-quiz/route.ts
+```
+
+Aturan penting:
+
+- `GEMINI_API_KEY` tetap hanya boleh dipakai di server-side API route.
+- File materi disimpan di Supabase Storage bucket `task-materials`.
+- User hanya boleh melihat file miliknya sendiri.
+- Jangan mengirim file ke AI dari frontend secara langsung.
+- Untuk DOCX, konversi dulu ke PDF atau text sebelum upload jika belum menambahkan parser khusus.
+
 ## Cara Memasukkan atau Mengganti Supabase URL
 
 File lokal:
@@ -454,6 +509,7 @@ CRON_SECRET=your_random_cron_secret_at_least_16_chars
 | Warna mata kuliah | `database/schema.sql`, `components/courses/course-manager.tsx` |
 | Priority badges | `database/schema.sql`, `components/tasks/priority-badge.tsx`, `components/tasks/task-manager.tsx` |
 | AI prompt behavior | `app/api/ai/*/route.ts`, `lib/gemini.ts` |
+| Upload materi dan quiz AI | `components/tasks/task-materials-manager.tsx`, `app/api/ai/material-breakdown/route.ts`, `app/api/ai/material-quiz/route.ts`, `lib/material-ai-server.ts`, `database/schema.sql` |
 | WhatsApp reminder | `components/settings/whatsapp-reminder-settings.tsx`, `app/api/cron/reminders/route.ts`, `lib/whatsapp.ts`, `vercel.json`, `database/schema.sql` |
 | Supabase URL | `.env.local`, Vercel Environment Variables |
 | Gemini API key | `.env.local`, Vercel Environment Variables |

@@ -3,6 +3,7 @@ import "server-only";
 import {
   GoogleGenAI,
   type GenerateContentConfig,
+  type Part,
   type SchemaUnion,
 } from "@google/genai";
 
@@ -17,6 +18,15 @@ type GeminiBaseOptions = {
 
 type GeminiJsonOptions = GeminiBaseOptions & {
   responseSchema?: SchemaUnion;
+};
+
+type GeminiFilePart = {
+  mimeType: string;
+  data: string;
+};
+
+type GeminiFileJsonOptions = GeminiJsonOptions & {
+  file: GeminiFilePart;
 };
 
 export class GeminiConfigError extends Error {
@@ -173,12 +183,95 @@ export async function generateGeminiText({
   }
 }
 
+export async function generateGeminiTextWithInlineFile({
+  prompt,
+  file,
+  model = DEFAULT_GEMINI_MODEL,
+  systemInstruction,
+  config,
+}: GeminiBaseOptions & { file: GeminiFilePart }) {
+  if (!prompt.trim()) {
+    throw new GeminiResponseError(
+      "GEMINI_RESPONSE_FAILED",
+      "Prompt Gemini tidak boleh kosong.",
+    );
+  }
+
+  if (!file.data || !file.mimeType) {
+    throw new GeminiResponseError(
+      "GEMINI_RESPONSE_FAILED",
+      "File dokumen untuk Gemini tidak valid.",
+    );
+  }
+
+  const contents: Part[] = [
+    {
+      text: prompt,
+    },
+    {
+      inlineData: {
+        mimeType: file.mimeType,
+        data: file.data,
+      },
+    },
+  ];
+
+  try {
+    const response = await getGeminiClient().models.generateContent({
+      model,
+      contents,
+      config: {
+        temperature: 0.3,
+        ...(systemInstruction ? { systemInstruction } : {}),
+        ...config,
+      },
+    });
+
+    const text = response.text?.trim();
+
+    if (!text) {
+      throw new GeminiResponseError(
+        "EMPTY_GEMINI_RESPONSE",
+        "Gemini mengembalikan response kosong.",
+      );
+    }
+
+    return text;
+  } catch (error) {
+    if (
+      error instanceof GeminiConfigError ||
+      error instanceof GeminiResponseError
+    ) {
+      throw error;
+    }
+
+    throw new GeminiRequestError(error);
+  }
+}
+
 export async function generateGeminiJson<T>({
   responseSchema,
   config,
   ...options
 }: GeminiJsonOptions): Promise<T> {
   const text = await generateGeminiText({
+    ...options,
+    config: {
+      ...config,
+      responseMimeType: "application/json",
+      ...(responseSchema ? { responseSchema } : {}),
+    },
+  });
+
+  return parseGeminiJson<T>(text);
+}
+
+export async function generateGeminiJsonWithInlineFile<T>({
+  responseSchema,
+  config,
+  ...options
+}: GeminiFileJsonOptions): Promise<T> {
+  const text = await generateGeminiTextWithInlineFile({
     ...options,
     config: {
       ...config,

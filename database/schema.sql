@@ -336,6 +336,21 @@ create trigger on_auth_user_created
 after insert on auth.users
 for each row execute function public.handle_new_user();
 
+grant usage on schema public to anon, authenticated;
+grant select, insert, update, delete on table public.profiles to authenticated;
+grant select, insert, update, delete on table public.courses to authenticated;
+grant select, insert, update, delete on table public.schedule_sessions to authenticated;
+grant select, insert, update, delete on table public.tasks to authenticated;
+grant select, insert, update, delete on table public.task_checklists to authenticated;
+grant select, insert, update, delete on table public.task_notes to authenticated;
+grant select, insert, update, delete on table public.study_plans to authenticated;
+grant select, insert, update, delete on table public.study_plan_items to authenticated;
+grant select, insert, update, delete on table public.ai_suggestions to authenticated;
+grant select, insert, update, delete on table public.task_materials to authenticated;
+grant select, insert, update, delete on table public.material_quiz_attempts to authenticated;
+grant select, insert, update, delete on table public.user_notification_settings to authenticated;
+grant select on table public.whatsapp_reminder_logs to authenticated;
+
 alter table public.profiles enable row level security;
 alter table public.courses enable row level security;
 alter table public.schedule_sessions enable row level security;

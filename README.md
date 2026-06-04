@@ -38,7 +38,7 @@ Semua fitur AI memanggil Gemini dari server-side API routes. `GEMINI_API_KEY` ti
 - AI Priority Assistant: mengurutkan tugas aktif berdasarkan urgency dan importance.
 - AI Notes Summarizer: merangkum notes menjadi summary, important points, dan suggested next actions.
 - AI Material Breakdown: menganalisis file materi yang diupload di detail tugas.
-- AI Material Quiz: membuat quiz dari materi, menghitung skor, dan menampilkan jawaban benar setelah submit.
+- AI Material Quiz: membuat quiz dari materi lewat menu `/quiz`, menghitung skor, dan menampilkan jawaban benar setelah submit.
 
 ## Tech Stack
 
@@ -59,6 +59,7 @@ app/
     ai/priority/
     courses/
     dashboard/
+    quiz/
     schedule/
     settings/
     tasks/

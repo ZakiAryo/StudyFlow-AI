@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   BookOpen,
   CalendarDays,
+  FileQuestion,
   GraduationCap,
   LayoutDashboard,
   Settings,
@@ -18,6 +19,7 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/courses", label: "Mata Kuliah", icon: BookOpen },
   { href: "/tasks", label: "Tugas", icon: GraduationCap },
+  { href: "/quiz", label: "Quiz", icon: FileQuestion },
   { href: "/schedule", label: "Jadwal", icon: CalendarDays },
   { href: "/ai/priority", label: "AI Priority", icon: Sparkles },
   { href: "/settings", label: "Settings", icon: Settings },

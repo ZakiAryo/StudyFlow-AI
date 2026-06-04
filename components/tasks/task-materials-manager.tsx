@@ -109,6 +109,46 @@ function formatFileSize(value: number) {
   return `${(value / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === "string" && error.trim()) {
+    return error;
+  }
+
+  if (isRecord(error) && typeof error.message === "string") {
+    return error.message;
+  }
+
+  return fallback;
+}
+
+function getUploadErrorMessage(error: unknown) {
+  const message = getErrorMessage(error, "Gagal upload materi tugas.");
+  const normalized = message.toLowerCase();
+
+  if (normalized.includes("bucket") || normalized.includes("not found")) {
+    return "Gagal upload: bucket Supabase Storage `task-materials` belum ada. Jalankan ulang database/schema.sql di Supabase SQL Editor.";
+  }
+
+  if (
+    normalized.includes("row-level") ||
+    normalized.includes("policy") ||
+    normalized.includes("permission") ||
+    normalized.includes("unauthorized")
+  ) {
+    return "Gagal upload: policy Supabase Storage belum mengizinkan user mengupload file. Jalankan ulang database/schema.sql dan pastikan user sudah login.";
+  }
+
+  return message;
+}
+
 function MaterialSkeleton() {
   return (
     <article className="rounded-lg border bg-card p-5 shadow-soft">
@@ -194,11 +234,7 @@ export function TaskMaterialsManager({
 
       setMaterials((data ?? []) as TaskMaterial[]);
     } catch (loadError) {
-      setError(
-        loadError instanceof Error
-          ? loadError.message
-          : "Gagal memuat materi tugas.",
-      );
+      setError(getErrorMessage(loadError, "Gagal memuat materi tugas."));
     } finally {
       setIsLoading(false);
     }
@@ -268,11 +304,7 @@ export function TaskMaterialsManager({
       setMaterials((current) => [data as TaskMaterial, ...current]);
       setSelectedFile(null);
     } catch (uploadError) {
-      setError(
-        uploadError instanceof Error
-          ? uploadError.message
-          : "Gagal upload materi tugas.",
-      );
+      setError(getUploadErrorMessage(uploadError));
     } finally {
       setIsUploading(false);
     }
@@ -316,11 +348,7 @@ export function TaskMaterialsManager({
         setSelectedBreakdownId(null);
       }
     } catch (deleteError) {
-      setError(
-        deleteError instanceof Error
-          ? deleteError.message
-          : "Gagal menghapus materi tugas.",
-      );
+      setError(getErrorMessage(deleteError, "Gagal menghapus materi tugas."));
     } finally {
       setBusyMaterialId(null);
     }
@@ -368,9 +396,7 @@ export function TaskMaterialsManager({
       );
     } catch (breakdownError) {
       setError(
-        breakdownError instanceof Error
-          ? breakdownError.message
-          : "Gagal membuat breakdown materi.",
+        getErrorMessage(breakdownError, "Gagal membuat breakdown materi."),
       );
     } finally {
       setIsGeneratingBreakdown(false);
@@ -413,11 +439,7 @@ export function TaskMaterialsManager({
 
       setQuizResult(payload as MaterialQuizResult);
     } catch (quizError) {
-      setError(
-        quizError instanceof Error
-          ? quizError.message
-          : "Gagal membuat quiz materi.",
-      );
+      setError(getErrorMessage(quizError, "Gagal membuat quiz materi."));
       setQuizMaterial(null);
     } finally {
       setIsGeneratingQuiz(false);
@@ -473,11 +495,7 @@ export function TaskMaterialsManager({
 
       setQuizSubmitted(true);
     } catch (submitError) {
-      setError(
-        submitError instanceof Error
-          ? submitError.message
-          : "Gagal menyimpan hasil quiz.",
-      );
+      setError(getErrorMessage(submitError, "Gagal menyimpan hasil quiz."));
     } finally {
       setIsSavingAttempt(false);
     }
@@ -597,7 +615,7 @@ export function TaskMaterialsManager({
                         </h3>
                       </div>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {formatFileSize(material.file_size)} ·{" "}
+                        {formatFileSize(material.file_size)} -{" "}
                         {material.mime_type}
                       </p>
                     </div>
@@ -730,7 +748,7 @@ export function TaskMaterialsManager({
               <div>
                 <h2 className="font-semibold">Quiz Materi</h2>
                 <p className="text-sm text-muted-foreground">
-                  {quizMaterial.file_name} · {taskTitle} · {courseName}
+                  {quizMaterial.file_name} - {taskTitle} - {courseName}
                 </p>
               </div>
               <button

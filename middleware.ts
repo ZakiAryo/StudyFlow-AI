@@ -11,6 +11,7 @@ const protectedRoutes = [
   "/dashboard",
   "/courses",
   "/tasks",
+  "/quiz",
   "/schedule",
   "/ai",
   "/settings",

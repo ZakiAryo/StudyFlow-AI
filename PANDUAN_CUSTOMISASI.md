@@ -358,6 +358,8 @@ Jangan mengirim token WhatsApp dari frontend. Semua request WhatsApp harus tetap
 File yang diedit:
 
 - `components/tasks/task-materials-manager.tsx`
+- `components/quiz/quiz-manager.tsx`
+- `app/(main)/quiz/page.tsx`
 - `app/api/ai/material-breakdown/route.ts`
 - `app/api/ai/material-quiz/route.ts`
 - `lib/material-ai-server.ts`
@@ -509,7 +511,7 @@ CRON_SECRET=your_random_cron_secret_at_least_16_chars
 | Warna mata kuliah | `database/schema.sql`, `components/courses/course-manager.tsx` |
 | Priority badges | `database/schema.sql`, `components/tasks/priority-badge.tsx`, `components/tasks/task-manager.tsx` |
 | AI prompt behavior | `app/api/ai/*/route.ts`, `lib/gemini.ts` |
-| Upload materi dan quiz AI | `components/tasks/task-materials-manager.tsx`, `app/api/ai/material-breakdown/route.ts`, `app/api/ai/material-quiz/route.ts`, `lib/material-ai-server.ts`, `database/schema.sql` |
+| Upload materi dan quiz AI | `components/tasks/task-materials-manager.tsx`, `components/quiz/quiz-manager.tsx`, `app/(main)/quiz/page.tsx`, `app/api/ai/material-breakdown/route.ts`, `app/api/ai/material-quiz/route.ts`, `lib/material-ai-server.ts`, `database/schema.sql` |
 | WhatsApp reminder | `components/settings/whatsapp-reminder-settings.tsx`, `app/api/cron/reminders/route.ts`, `lib/whatsapp.ts`, `vercel.json`, `database/schema.sql` |
 | Supabase URL | `.env.local`, Vercel Environment Variables |
 | Gemini API key | `.env.local`, Vercel Environment Variables |
